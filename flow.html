@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Finance App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .modal {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .scroll-container {
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Main App Container -->
+    <div id="app" class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col h-[90vh]">
+
+        <!-- Header -->
+        <header class="bg-zinc-700 text-white p-6 rounded-t-2xl shadow-md">
+            <div class="flex items-center justify-between">
+                <h1 class="text-3xl font-bold">Flow</h1>
+                <button onclick="showModal('settings')" class="flex items-center justify-center p-2 -mr-2 text-sm rounded-full transition-colors hover:bg-zinc-600">
+                    <!-- SVG for Settings Icon -->
+                    <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="mt-4 flex justify-between items-center text-sm opacity-90">
+                <span id="balanceText">Total Balance</span>
+                <span id="totalBalance" class="text-2xl font-bold">৳0.00</span>
+            </div>
+        </header>
+
+        <!-- Main Content (Scrollable) -->
+        <main class="flex-1 overflow-y-auto scroll-container p-4">
+            <!-- Summary Section -->
+            <section class="bg-white p-4 rounded-xl shadow-inner border border-gray-200">
+                <div class="grid grid-cols-2 gap-4 text-center text-sm font-medium text-gray-700">
+                    <div class="bg-green-100 text-green-700 p-3 rounded-lg flex flex-col items-center">
+                        <span class="text-xs font-semibold uppercase">Income</span>
+                        <span id="totalIncome" class="mt-1 font-bold text-lg">৳0.00</span>
+                    </div>
+                    <div class="bg-red-100 text-red-700 p-3 rounded-lg flex flex-col items-center">
+                        <span class="text-xs font-semibold uppercase">Expenses</span>
+                        <span id="totalExpenses" class="mt-1 font-bold text-lg">৳0.00</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Expense Breakdown Chart -->
+            <section class="mt-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-2">Expense Breakdown</h2>
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-inner">
+                    <canvas id="expenseChart"></canvas>
+                    <p id="noChartDataMsg" class="text-gray-500 text-center text-sm hidden mt-4">Add expenses to see a chart!</p>
+                </div>
+            </section>
+
+            <!-- Wallet Selector -->
+            <section class="mt-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-2">My Wallets</h2>
+                <div id="walletList" class="flex flex-wrap gap-2">
+                    <!-- Wallets will be injected here -->
+                </div>
+            </section>
+
+            <!-- Transactions List -->
+            <section class="mt-6">
+                <h2 class="text-lg font-semibold text-gray-800 mb-2">Recent Transactions</h2>
+                <div id="transactionsList" class="space-y-3">
+                    <!-- Transactions will be injected here -->
+                    <p id="noTransactionsMsg" class="text-gray-500 text-center text-sm p-4 hidden">No transactions recorded yet.</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer Actions -->
+        <footer class="bg-white p-4 border-t border-gray-200 shadow-inner rounded-b-2xl">
+            <div class="grid grid-cols-4 gap-2">
+                <button onclick="showModal('add-transaction')" class="bg-white text-gray-700 font-semibold py-2 px-1 rounded-xl transition duration-200 hover:bg-gray-100 flex flex-col items-center justify-center space-y-1">
+                    <span class="text-xs font-medium">Add</span>
+                </button>
+                <button onclick="showModal('transfer-money')" class="bg-white text-gray-700 font-semibold py-2 px-1 rounded-xl transition duration-200 hover:bg-gray-100 flex flex-col items-center justify-center space-y-1">
+                    <span class="text-xs font-medium">Transfer</span>
+                </button>
+                <button onclick="showModal('manage-wallets')" class="bg-white text-gray-700 font-semibold py-2 px-1 rounded-xl transition duration-200 hover:bg-gray-100 flex flex-col items-center justify-center space-y-1">
+                    <span class="text-xs font-medium">Wallets</span>
+                </button>
+                <button onclick="showModal('manage-categories')" class="bg-white text-gray-700 font-semibold py-2 px-1 rounded-xl transition duration-200 hover:bg-gray-100 flex flex-col items-center justify-center space-y-1">
+                    <span class="text-xs font-medium">Categories</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modal" class="modal fixed inset-0 z-50 flex items-end sm:items-center justify-center hidden">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-sm modal-content p-6 shadow-2xl transform">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="modalTitle" class="text-xl font-bold text-gray-800"></h2>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 transition duration-200">
+                    Close
+                </button>
+            </div>
+
+            <!-- Add Transaction Form -->
+            <form id="addTransactionForm" class="space-y-4 hidden">
+                <div>
+                    <label for="transactionAmount" class="block text-sm font-medium text-gray-700">Amount</label>
+                    <input type="number" step="0.01" id="transactionAmount" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200" required>
+                </div>
+                <div>
+                    <label for="transactionCurrency" class="block text-sm font-medium text-gray-700">Currency</label>
+                    <select id="transactionCurrency" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200" required></select>
+                </div>
+                <div>
+                    <label for="transactionType" class="block text-sm font-medium text-gray-700">Type</label>
+                    <select id="transactionType" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200">
+                        <option value="expense">Expense</option>
+                        <option value="income">Income</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="transactionDetails" class="block text-sm font-medium text-gray-700">Notes</label>
+                    <textarea id="transactionDetails" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200"></textarea>
+                </div>
+                <div>
+                    <label for="transactionCategory" class="block text-sm font-medium text-gray-700">Category</label>
+                    <select id="transactionCategory" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200">
+                        <!-- Categories will be injected here -->
+                    </select>
+                </div>
+                <div id="subcategoryField" class="hidden">
+                    <label for="transactionSubcategory" class="block text-sm font-medium text-gray-700">Subcategory</label>
+                    <select id="transactionSubcategory" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200">
+                        <!-- Subcategories will be injected here -->
+                    </select>
+                </div>
+                <div>
+                    <label for="transactionWallet" class="block text-sm font-medium text-gray-700">Wallet</label>
+                    <select id="transactionWallet" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200" required>
+                        <!-- Wallets will be injected here -->
+                    </select>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="w-full bg-zinc-600 hover:bg-zinc-700 text-white font-bold py-3 px-4 rounded-xl transition duration-200 shadow-md transform active:scale-95">Add Transaction</button>
+                </div>
+            </form>
+
+            <!-- Transfer Money Form -->
+            <form id="transferMoneyForm" class="space-y-4 hidden">
+                <div>
+                    <label for="transferAmount" class="block text-sm font-medium text-gray-700">Amount</label>
+                    <input type="number" step="0.01" id="transferAmount" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200" required>
+                </div>
+                <div>
+                    <label for="transferCurrency" class="block text-sm font-medium text-gray-700">Currency</label>
+                    <select id="transferCurrency" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200" required></select>
+                </div>
+                <div>
+                    <label for="fromWallet" class="block text-sm font-medium text-gray-700">From Wallet</label>
+                    <select id="fromWallet" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200" required>
+                        <!-- Wallets will be injected here -->
+                    </select>
+                </div>
+                <div>
+                    <label for="toWallet" class="block text-sm font-medium text-gray-700">To Wallet</label>
+                    <select id="toWallet" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200" required>
+                        <!-- Wallets will be injected here -->
+                    </select>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="w-full bg-zinc-600 hover:bg-zinc-700 text-white font-bold py-3 px-4 rounded-xl transition duration-200 shadow-md transform active:scale-95">Transfer Money</button>
+                </div>
+            </form>
+
+            <!-- Manage Wallets Section -->
+            <div id="manageWalletsSection" class="hidden">
+                <form id="addWalletForm" class="mb-4 flex gap-2">
+                    <input type="text" id="newWalletName" placeholder="New Wallet Name" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500">
+                    <button type="submit" class="bg-zinc-600 hover:bg-zinc-700 text-white text-sm font-bold py-2 px-4 rounded-xl transition duration-200 transform active:scale-95">Add</button>
+                </form>
+                <ul id="walletsListManager" class="space-y-2">
+                    <!-- Wallets will be injected here -->
+                </ul>
+            </div>
+
+            <!-- Manage Categories Section -->
+            <div id="manageCategoriesSection" class="hidden">
+                <form id="addCategoryForm" class="mb-4 flex gap-2">
+                    <input type="text" id="newCategoryName" placeholder="New Category Name" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500">
+                    <button type="submit" class="bg-zinc-600 hover:bg-zinc-700 text-white text-sm font-bold py-2 px-4 rounded-xl transition duration-200 transform active:scale-95">Add</button>
+                </form>
+                <div id="categoriesListContainer">
+                    <ul id="categoriesListManager" class="space-y-2">
+                        <!-- Categories will be injected here -->
+                    </ul>
+                </div>
+                <div id="subcategoryManager" class="hidden mt-4">
+                    <h3 id="subcategoryTitle" class="text-lg font-semibold text-gray-800 mb-2"></h3>
+                    <form id="addSubcategoryForm" class="mb-4 flex gap-2">
+                        <input type="text" id="newSubcategoryName" placeholder="New Subcategory Name" class="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500">
+                        <button type="submit" class="bg-zinc-600 hover:bg-zinc-700 text-white text-sm font-bold py-2 px-4 rounded-xl transition duration-200 transform active:scale-95">Add</button>
+                    </form>
+                    <ul id="subcategoriesListManager" class="space-y-2">
+                        <!-- Subcategories will be injected here -->
+                    </ul>
+                    <button onclick="hideSubcategoryManager()" class="mt-4 text-gray-500 hover:text-gray-700">Back to Categories</button>
+                </div>
+            </div>
+
+            <!-- Settings Panel -->
+            <div id="settingsSection" class="space-y-6 hidden">
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 mb-2">User Info</h3>
+                    <p class="text-gray-600">User ID: <span id="userIdDisplay">Loading...</span></p>
+                </div>
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 mb-2">Base Currency</h3>
+                    <select id="baseCurrencySelect" class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-zinc-500 focus:ring-zinc-500 transition duration-200"></select>
+                </div>
+                <div>
+                    <h3 class="text-md font-semibold text-gray-800 mb-2">Chart Type</h3>
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="chartType" value="bar" id="chartTypeBar" class="form-radio text-zinc-600 focus:ring-zinc-500">
+                            <span class="ml-2 text-gray-700">Bar</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="chartType" value="line" id="chartTypeLine" class="form-radio text-zinc-600 focus:ring-zinc-500">
+                            <span class="ml-2 text-gray-700">Line</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="chartType" value="pie" id="chartTypePie" class="form-radio text-zinc-600 focus:ring-zinc-500">
+                            <span class="ml-2 text-gray-700">Pie</span>
+                        </label>
+                    </div>
+                </div>
+                <!-- Data Management Section -->
+                <div class="space-y-2">
+                    <h3 class="text-md font-semibold text-gray-800 mb-2">Data Management</h3>
+                    <div class="flex space-x-2">
+                        <button onclick="exportData()" class="flex-1 bg-zinc-600 hover:bg-zinc-700 text-white text-sm font-bold py-2 px-3 rounded-xl transition duration-200 shadow-md transform active:scale-95">
+                            Export Data
+                        </button>
+                        <button onclick="generateFinancialReport()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-3 rounded-xl transition duration-200 shadow-md transform active:scale-95">
+                            ✨ Financial Check
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Financial Report Panel -->
+            <div id="financialReportSection" class="space-y-4 hidden">
+                <div id="reportLoading" class="flex flex-col items-center justify-center p-8">
+                    <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+                    <p class="mt-4 text-gray-600">Generating report...</p>
+                </div>
+                <div id="reportContent" class="prose max-w-none text-gray-800 hidden">
+                    <!-- Report content will be injected here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, deleteDoc, doc, updateDoc, getDoc, setLogLevel, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Set Firebase log level for debugging
+        setLogLevel('debug');
+
+        // Global variables for Firebase
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // UI Elements
+        const totalBalanceEl = document.getElementById('totalBalance');
+        const totalIncomeEl = document.getElementById('totalIncome');
+        const totalExpensesEl = document.getElementById('totalExpenses');
+        const walletListEl = document.getElementById('walletList');
+        const transactionsListEl = document.getElementById('transactionsList');
+        const noTransactionsMsg = document.getElementById('noTransactionsMsg');
+        const modalEl = document.getElementById('modal');
+        const modalTitleEl = document.getElementById('modalTitle');
+        const addTransactionForm = document.getElementById('addTransactionForm');
+        const transactionAmountInput = document.getElementById('transactionAmount');
+        const transactionCurrencySelect = document.getElementById('transactionCurrency');
+        const transactionTypeSelect = document.getElementById('transactionType');
+        const transactionDetailsInput = document.getElementById('transactionDetails');
+        const transactionCategorySelect = document.getElementById('transactionCategory');
+        const subcategoryField = document.getElementById('subcategoryField');
+        const transactionSubcategorySelect = document.getElementById('transactionSubcategory');
+        const transactionWalletSelect = document.getElementById('transactionWallet');
+        const manageWalletsSection = document.getElementById('manageWalletsSection');
+        const addWalletForm = document.getElementById('addWalletForm');
+        const newWalletNameInput = document.getElementById('newWalletName');
+        const walletsListManager = document.getElementById('walletsListManager');
+        const manageCategoriesSection = document.getElementById('manageCategoriesSection');
+        const addCategoryForm = document.getElementById('addCategoryForm');
+        const newCategoryNameInput = document.getElementById('newCategoryName');
+        const categoriesListContainer = document.getElementById('categoriesListContainer');
+        const subcategoryManager = document.getElementById('subcategoryManager');
+        const subcategoryTitle = document.getElementById('subcategoryTitle');
+        const addSubcategoryForm = document.getElementById('addSubcategoryForm');
+        const newSubcategoryNameInput = document.getElementById('newSubcategoryName');
+        const subcategoriesListManager = document.getElementById('subcategoriesListManager');
+        const categoriesListManager = document.getElementById('categoriesListManager');
+        const transferMoneyForm = document.getElementById('transferMoneyForm');
+        const transferAmountInput = document.getElementById('transferAmount');
+        const transferCurrencySelect = document.getElementById('transferCurrency');
+        const fromWalletSelect = document.getElementById('fromWallet');
+        const toWalletSelect = document.getElementById('toWallet');
+        const expenseChartCanvas = document.getElementById('expenseChart');
+        const noChartDataMsg = document.getElementById('noChartDataMsg');
+        const settingsSection = document.getElementById('settingsSection');
+        const baseCurrencySelect = document.getElementById('baseCurrencySelect');
+        const balanceTextEl = document.getElementById('balanceText');
+        const financialReportSection = document.getElementById('financialReportSection');
+        const reportLoading = document.getElementById('reportLoading');
+        const reportContent = document.getElementById('reportContent');
+        const userIdDisplayEl = document.getElementById('userIdDisplay');
+
+        // App State
+        let db, auth, userId = null;
+        let transactions = [];
+        let wallets = {};
+        let categories = {};
+        let currentWalletId = null;
+        let expenseChart;
+        let userSettings = {
+            baseCurrency: 'BDT',
+            chartType: 'bar'
+        };
+        let currentCategoryIdForSubcategory = null;
+
+        // Hardcoded currencies and their conversion rates to BDT for simplicity
+        const currencies = {
+            'BDT': { symbol: '৳', rate: 1 },
+            'USD': { symbol: '$', rate: 105.5 },
+            'EUR': { symbol: '€', rate: 115.2 }
+        };
+
+        // Firebase Initialization and Auth
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        userIdDisplayEl.textContent = userId;
+                        console.log("User signed in with UID:", userId);
+                        await checkAndAddDefaultWallet();
+                        await checkAndAddDefaultCategory();
+                        await checkAndAddDefaultSettings();
+                        startRealtimeListeners();
+                    } else {
+                        console.error("User not authenticated.");
+                        userIdDisplayEl.textContent = 'Not signed in';
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+            }
+        }
+
+        async function checkAndAddDefaultWallet() {
+            const walletsRef = collection(db, `artifacts/${appId}/users/${userId}/wallets`);
+            const walletsSnapshot = await getDocs(walletsRef);
+            if (walletsSnapshot.empty) {
+                console.log("No wallets found. Adding default wallet.");
+                await addDoc(walletsRef, {
+                    name: "Main Wallet",
+                    createdAt: new Date(),
+                });
+            } else {
+                console.log("Wallets already exist.");
+            }
+        }
+
+        async function checkAndAddDefaultCategory() {
+            const transferCategoryRef = doc(db, `artifacts/${appId}/users/${userId}/categories/Transfer`);
+            const docSnap = await getDoc(transferCategoryRef);
+            if (!docSnap.exists()) {
+                 console.log("Adding default 'Transfer' category.");
+                await setDoc(transferCategoryRef, { name: 'Transfer', subcategories: [], createdAt: new Date() });
+            }
+        }
+
+        async function checkAndAddDefaultSettings() {
+            const settingsRef = doc(db, `artifacts/${appId}/users/${userId}/settings/userSettings`);
+            const docSnap = await getDoc(settingsRef);
+            if (!docSnap.exists()) {
+                console.log("Adding default user settings.");
+                await setDoc(settingsRef, userSettings);
+            }
+        }
+
+        // Real-time Database Listeners
+        function startRealtimeListeners() {
+            if (!db || !userId) {
+                console.error("Database or User ID not available.");
+                return;
+            }
+            console.log("Starting real-time listeners...");
+
+            // Listen for changes to user settings
+            onSnapshot(doc(db, `artifacts/${appId}/users/${userId}/settings/userSettings`), (docSnap) => {
+                if (docSnap.exists()) {
+                    userSettings = docSnap.data();
+                    populateSettings();
+                    updateDashboard();
+                    renderChart();
+                }
+            });
+
+            // Listen for changes to wallets
+            onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/wallets`), (snapshot) => {
+                wallets = {};
+                snapshot.forEach(doc => {
+                    wallets[doc.id] = doc.data();
+                });
+                renderWallets();
+                populateSelects();
+            }, (error) => {
+                console.error("Error listening to wallets:", error);
+            });
+
+            // Listen for changes to categories
+            onSnapshot(collection(db, `artifacts/${appId}/users/${userId}/categories`), (snapshot) => {
+                categories = {};
+                snapshot.forEach(doc => {
+                    categories[doc.id] = doc.data();
+                });
+                renderCategoriesManager();
+                populateSelects();
+            }, (error) => {
+                console.error("Error listening to categories:", error);
+            });
+
+            // Listen for changes to transactions
+            onSnapshot(query(collection(db, `artifacts/${appId}/users/${userId}/transactions`)), (snapshot) => {
+                transactions = [];
+                snapshot.forEach(doc => {
+                    transactions.push({ id: doc.id, ...doc.data() });
+                });
+                transactions.sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
+                updateDashboard();
+                renderTransactions();
+                renderChart();
+            }, (error) => {
+                console.error("Error listening to transactions:", error);
+            }
+            );
+        }
+
+        // UI Functions
+        function showModal(type) {
+            modalEl.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            // Hide all sections first
+            addTransactionForm.classList.add('hidden');
+            transferMoneyForm.classList.add('hidden');
+            manageWalletsSection.classList.add('hidden');
+            manageCategoriesSection.classList.add('hidden');
+            settingsSection.classList.add('hidden');
+            financialReportSection.classList.add('hidden');
+            subcategoryManager.classList.add('hidden');
+            categoriesListContainer.classList.remove('hidden');
+
+
+            // Show the requested section
+            if (type === 'add-transaction') {
+                modalTitleEl.textContent = 'Add Transaction';
+                addTransactionForm.classList.remove('hidden');
+            } else if (type === 'transfer-money') {
+                modalTitleEl.textContent = 'Transfer Money';
+                transferMoneyForm.classList.remove('hidden');
+            } else if (type === 'manage-wallets') {
+                modalTitleEl.textContent = 'Manage Wallets';
+                manageWalletsSection.classList.remove('hidden');
+            } else if (type === 'manage-categories') {
+                modalTitleEl.textContent = 'Manage Categories';
+                manageCategoriesSection.classList.remove('hidden');
+            } else if (type === 'settings') {
+                modalTitleEl.textContent = 'Settings';
+                settingsSection.classList.remove('hidden');
+                populateSettings();
+            } else if (type === 'financial-report') {
+                modalTitleEl.textContent = 'Financial Health Report';
+                financialReportSection.classList.remove('hidden');
+            }
+        }
+
+        function closeModal() {
+            modalEl.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function showSubcategoryManager(categoryId) {
+            currentCategoryIdForSubcategory = categoryId;
+            subcategoryTitle.textContent = `Subcategories for: ${categories[categoryId].name}`;
+            categoriesListContainer.classList.add('hidden');
+            subcategoryManager.classList.remove('hidden');
+            renderSubcategories();
+        }
+
+        function hideSubcategoryManager() {
+            currentCategoryIdForSubcategory = null;
+            categoriesListContainer.classList.remove('hidden');
+            subcategoryManager.classList.add('hidden');
+        }
+
+        function convertToBaseCurrency(amount, currency) {
+            const baseRate = currencies[userSettings.baseCurrency]?.rate || 1;
+            const transactionRate = currencies[currency]?.rate || 1;
+            return (amount * transactionRate) / baseRate;
+        }
+
+        function updateDashboard() {
+            let totalIncome = 0;
+            let totalExpenses = 0;
+            
+            balanceTextEl.textContent = `Total Balance (${userSettings.baseCurrency})`;
+
+            transactions.forEach(t => {
+                const amountInBase = convertToBaseCurrency(parseFloat(t.amount), t.currency);
+                if (t.type === 'income') {
+                    totalIncome += amountInBase;
+                } else {
+                    totalExpenses += amountInBase;
+                }
+            });
+
+            const symbol = currencies[userSettings.baseCurrency]?.symbol || '';
+            totalIncomeEl.textContent = `${symbol}${totalIncome.toFixed(2)}`;
+            totalExpensesEl.textContent = `${symbol}${totalExpenses.toFixed(2)}`;
+            totalBalanceEl.textContent = `${symbol}${(totalIncome - totalExpenses).toFixed(2)}`;
+
+            renderWallets();
+        }
+
+        function renderWallets() {
+            walletListEl.innerHTML = '';
+            transactionWalletSelect.innerHTML = '';
+            fromWalletSelect.innerHTML = '';
+            toWalletSelect.innerHTML = '';
+            walletsListManager.innerHTML = '';
+
+            Object.keys(wallets).forEach(id => {
+                const wallet = wallets[id];
+                const button = document.createElement('button');
+                button.className = `py-2 px-4 rounded-xl shadow-sm text-sm font-medium transition duration-200 ${currentWalletId === id ? 'bg-zinc-200 text-zinc-800' : 'bg-gray-100'}`;
+                button.textContent = wallet.name;
+                button.onclick = () => {
+                    currentWalletId = id;
+                    renderTransactions();
+                    document.querySelectorAll('#walletList button').forEach(btn => btn.classList.remove('bg-zinc-200', 'text-zinc-800'));
+                    button.classList.add('bg-zinc-200', 'text-zinc-800');
+                };
+                walletListEl.appendChild(button);
+
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = wallet.name;
+                transactionWalletSelect.appendChild(option.cloneNode(true));
+                fromWalletSelect.appendChild(option.cloneNode(true));
+                toWalletSelect.appendChild(option.cloneNode(true));
+
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-gray-50 p-2 rounded-lg';
+                li.innerHTML = `
+                    <span class="text-gray-700">${wallet.name}</span>
+                    <button onclick="deleteWallet('${id}')" class="text-red-500 hover:text-red-700">
+                        Delete
+                    </button>
+                `;
+                walletsListManager.appendChild(li);
+            });
+
+            if (Object.keys(wallets).length > 0 && !currentWalletId) {
+                const firstWalletId = Object.keys(wallets)[0];
+                currentWalletId = firstWalletId;
+                const firstButton = walletListEl.querySelector('button');
+                if (firstButton) {
+                    firstButton.classList.add('bg-zinc-200', 'text-zinc-800');
+                }
+            }
+        }
+
+        function renderTransactions() {
+            transactionsListEl.innerHTML = '';
+            const filteredTransactions = transactions.filter(t => currentWalletId ? t.walletId === currentWalletId : true);
+
+            if (filteredTransactions.length === 0) {
+                noTransactionsMsg.classList.remove('hidden');
+                return;
+            } else {
+                noTransactionsMsg.classList.add('hidden');
+            }
+
+            filteredTransactions.forEach(t => {
+                const transactionEl = document.createElement('div');
+                const isIncome = t.type === 'income';
+                const textColor = isIncome ? 'text-green-600' : 'text-red-600';
+                const sign = isIncome ? '+' : '-';
+                const categoryName = categories[t.categoryId] ? categories[t.categoryId].name : 'Uncategorized';
+                const subcategoryName = t.subcategoryId ? t.subcategoryId : '';
+                const currencySymbol = currencies[t.currency]?.symbol || '';
+                
+                const combinedCategory = subcategoryName ? `${categoryName} > ${subcategoryName}` : categoryName;
+
+                transactionEl.className = 'flex justify-between items-center p-4 bg-gray-50 rounded-xl shadow-sm transition duration-200 hover:shadow-md';
+                transactionEl.innerHTML = `
+                    <div class="flex-1">
+                        <h3 class="text-md font-medium text-gray-800">${t.title || 'No Title'}</h3>
+                        <p class="text-sm text-gray-500">${new Date(t.createdAt.seconds * 1000).toLocaleDateString()}</p>
+                        <p class="text-xs text-gray-400">Category: ${combinedCategory}</p>
+                        ${t.details ? `<p class="text-xs text-gray-400 mt-1 italic">Notes: ${t.details}</p>` : ''}
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-lg ${textColor}">${sign}${currencySymbol}${parseFloat(t.amount).toFixed(2)}</span>
+                        <button onclick="deleteTransaction('${t.id}')" class="text-gray-400 hover:text-red-500 transition duration-200">
+                            Delete
+                        </button>
+                    </div>
+                `;
+                transactionsListEl.appendChild(transactionEl);
+            });
+        }
+
+        function renderCategoriesManager() {
+            categoriesListManager.innerHTML = '';
+            Object.keys(categories).forEach(id => {
+                const category = categories[id];
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-gray-50 p-2 rounded-lg';
+                if (id === 'Transfer') {
+                     li.innerHTML = `<span class="text-gray-700">${category.name}</span>`;
+                } else {
+                    li.innerHTML = `
+                    <span class="text-gray-700">${category.name}</span>
+                    <div class="flex items-center space-x-2">
+                         <button onclick="showSubcategoryManager('${id}')" class="text-zinc-500 hover:text-zinc-700 text-sm">Manage Subcategories</button>
+                        <button onclick="deleteCategory('${id}')" class="text-red-500 hover:text-red-700">
+                            Delete
+                        </button>
+                    </div>
+                    `;
+                }
+                categoriesListManager.appendChild(li);
+            });
+        }
+
+        function renderSubcategories() {
+            subcategoriesListManager.innerHTML = '';
+            const subcategories = categories[currentCategoryIdForSubcategory]?.subcategories || [];
+            subcategories.forEach(sub => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-gray-50 p-2 rounded-lg';
+                li.innerHTML = `
+                    <span class="text-gray-700">${sub}</span>
+                    <button onclick="deleteSubcategory('${sub}')" class="text-red-500 hover:text-red-700">
+                        Delete
+                    </button>
+                `;
+                subcategoriesListManager.appendChild(li);
+            });
+        }
+
+        function populateSelects() {
+            transactionCategorySelect.innerHTML = Object.keys(categories).map(id => `<option value="${id}">${categories[id].name}</option>`).join('');
+            transactionWalletSelect.innerHTML = Object.keys(wallets).map(id => `<option value="${id}">${wallets[id].name}</option>`).join('');
+            fromWalletSelect.innerHTML = Object.keys(wallets).map(id => `<option value="${id}">${wallets[id].name}</option>`).join('');
+            toWalletSelect.innerHTML = Object.keys(wallets).map(id => `<option value="${id}">${wallets[id].name}</option>`).join('');
+            
+            transactionCurrencySelect.innerHTML = Object.keys(currencies).map(code => `<option value="${code}" ${code === userSettings.baseCurrency ? 'selected' : ''}>${code} (${currencies[code].symbol})</option>`).join('');
+            transferCurrencySelect.innerHTML = Object.keys(currencies).map(code => `<option value="${code}" ${code === userSettings.baseCurrency ? 'selected' : ''}>${code} (${currencies[code].symbol})</option>`).join('');
+            
+            updateSubcategorySelect();
+        }
+
+        function updateSubcategorySelect() {
+            const selectedCategoryId = transactionCategorySelect.value;
+            const subcategories = categories[selectedCategoryId]?.subcategories || [];
+            if (subcategories.length > 0) {
+                subcategoryField.classList.remove('hidden');
+                transactionSubcategorySelect.innerHTML = `<option value="">None</option>` + subcategories.map(sub => `<option value="${sub}">${sub}</option>`).join('');
+            } else {
+                subcategoryField.classList.add('hidden');
+                transactionSubcategorySelect.innerHTML = '';
+            }
+        }
+
+        function populateSettings() {
+            baseCurrencySelect.innerHTML = Object.keys(currencies).map(code => `<option value="${code}" ${code === userSettings.baseCurrency ? 'selected' : ''}>${code} (${currencies[code].symbol})</option>`).join('');
+            document.querySelectorAll('input[name="chartType"]').forEach(radio => {
+                if (radio.value === userSettings.chartType) {
+                    radio.checked = true;
+                }
+            });
+        }
+
+        function renderChart() {
+            // Aggregate expenses by category, converted to the base currency
+            const expenseData = transactions.filter(t => t.type === 'expense')
+                .reduce((acc, t) => {
+                    const categoryName = categories[t.categoryId] ? categories[t.categoryId].name : 'Uncategorized';
+                    const amountInBase = convertToBaseCurrency(parseFloat(t.amount), t.currency);
+                    acc[categoryName] = (acc[categoryName] || 0) + amountInBase;
+                    return acc;
+                }, {});
+
+            const labels = Object.keys(expenseData);
+            const data = Object.values(expenseData);
+
+            if (labels.length === 0) {
+                noChartDataMsg.classList.remove('hidden');
+                if (expenseChart) {
+                    expenseChart.destroy();
+                }
+                return;
+            } else {
+                noChartDataMsg.classList.add('hidden');
+            }
+
+            const chartConfig = {
+                type: userSettings.chartType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `Total Expense (${userSettings.baseCurrency})`,
+                        data: data,
+                        backgroundColor: userSettings.chartType === 'pie' 
+                            ? ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6']
+                            : 'rgba(239, 68, 68, 0.6)',
+                        borderColor: userSettings.chartType === 'pie'
+                            ? ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6']
+                            : 'rgba(239, 68, 68, 1)',
+                        borderWidth: 1,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: userSettings.chartType === 'pie',
+                            position: 'bottom',
+                        },
+                        title: {
+                            display: false,
+                        },
+                    },
+                    scales: userSettings.chartType === 'pie' ? {} : {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: `Amount (${userSettings.baseCurrency})`
+                            }
+                        }
+                    }
+                }
+            };
+
+            if (expenseChart) {
+                expenseChart.destroy();
+            }
+            const ctx = expenseChartCanvas.getContext('2d');
+            expenseChart = new Chart(ctx, chartConfig);
+        }
+
+        // Database Operations
+        async function updateBaseCurrency(event) {
+            const newCurrency = event.target.value;
+            const settingsRef = doc(db, `artifacts/${appId}/users/${userId}/settings/userSettings`);
+            await updateDoc(settingsRef, { baseCurrency: newCurrency });
+        }
+
+        async function updateChartType(event) {
+            const newChartType = event.target.value;
+            const settingsRef = doc(db, `artifacts/${appId}/users/${userId}/settings/userSettings`);
+            await updateDoc(settingsRef, { chartType: newChartType });
+        }
+
+        async function addTransaction(event) {
+            event.preventDefault();
+            const amount = parseFloat(transactionAmountInput.value);
+            const currency = transactionCurrencySelect.value;
+            const type = transactionTypeSelect.value;
+            const details = transactionDetailsInput.value;
+            const title = details || 'New Transaction';
+            const categoryId = transactionCategorySelect.value;
+            const subcategoryId = transactionSubcategorySelect.value || null;
+            const walletId = transactionWalletSelect.value;
+
+            if (isNaN(amount) || !walletId) {
+                console.error("Invalid transaction data. Amount is not a number or no wallet is selected.");
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/transactions`), {
+                    amount,
+                    currency,
+                    type,
+                    title,
+                    details,
+                    categoryId,
+                    subcategoryId,
+                    walletId,
+                    createdAt: new Date(),
+                });
+                addTransactionForm.reset();
+                closeModal();
+            } catch (error) {
+                console.error("Error adding transaction:", error);
+            }
+        }
+
+        async function addTransfer(event) {
+            event.preventDefault();
+            const amount = parseFloat(transferAmountInput.value);
+            const currency = transferCurrencySelect.value;
+            const fromWalletId = fromWalletSelect.value;
+            const toWalletId = toWalletSelect.value;
+
+            if (isNaN(amount) || !fromWalletId || !toWalletId) {
+                console.error("Invalid transfer data. Amount is not a number or wallets are not selected.");
+                return;
+            }
+            if (fromWalletId === toWalletId) {
+                console.error("Cannot transfer to the same wallet.");
+                return;
+            }
+
+            const fromWalletName = wallets[fromWalletId].name;
+            const toWalletName = wallets[toWalletId].name;
+
+            try {
+                // Expense transaction from the source wallet
+                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/transactions`), {
+                    amount,
+                    currency,
+                    type: 'expense',
+                    title: `Transfer to ${toWalletName}`,
+                    details: null,
+                    categoryId: 'Transfer',
+                    subcategoryId: null,
+                    walletId: fromWalletId,
+                    createdAt: new Date(),
+                });
+                
+                // Income transaction to the destination wallet
+                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/transactions`), {
+                    amount,
+                    currency,
+                    type: 'income',
+                    title: `Transfer from ${fromWalletName}`,
+                    details: null,
+                    categoryId: 'Transfer',
+                    subcategoryId: null,
+                    walletId: toWalletId,
+                    createdAt: new Date(),
+                });
+                
+                transferMoneyForm.reset();
+                closeModal();
+            } catch (error) {
+                console.error("Error adding transfer:", error);
+            }
+        }
+
+        async function deleteTransaction(id) {
+            try {
+                await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/transactions`, id));
+            } catch (error) {
+                console.error("Error deleting transaction:", error);
+            }
+        }
+
+        async function addWallet(event) {
+            event.preventDefault();
+            const name = newWalletNameInput.value.trim();
+            if (name === '') return;
+
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/wallets`), {
+                    name,
+                    createdAt: new Date(),
+                });
+                newWalletNameInput.value = '';
+            } catch (error) {
+                console.error("Error adding wallet:", error);
+            }
+        }
+
+        async function deleteWallet(id) {
+            try {
+                await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/wallets`, id));
+            } catch (error) {
+                console.error("Error deleting wallet:", error);
+            }
+        }
+
+        async function addCategory(event) {
+            event.preventDefault();
+            const name = newCategoryNameInput.value.trim();
+            if (name === '') return;
+
+            try {
+                await addDoc(collection(db, `artifacts/${appId}/users/${userId}/categories`), {
+                    name,
+                    subcategories: [],
+                    createdAt: new Date(),
+                });
+                newCategoryNameInput.value = '';
+            } catch (error) {
+                console.error("Error adding category:", error);
+            }
+        }
+
+        async function deleteCategory(id) {
+            try {
+                await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/categories`, id));
+            } catch (error) {
+                console.error("Error deleting category:", error);
+            }
+        }
+
+        async function addSubcategory(event) {
+            event.preventDefault();
+            const name = newSubcategoryNameInput.value.trim();
+            if (name === '') return;
+            const categoryRef = doc(db, `artifacts/${appId}/users/${userId}/categories/${currentCategoryIdForSubcategory}`);
+            const category = categories[currentCategoryIdForSubcategory];
+            const updatedSubcategories = [...(category.subcategories || []), name];
+
+            try {
+                await updateDoc(categoryRef, { subcategories: updatedSubcategories });
+                newSubcategoryNameInput.value = '';
+            } catch (error) {
+                console.error("Error adding subcategory:", error);
+            }
+        }
+
+        async function deleteSubcategory(name) {
+            const categoryRef = doc(db, `artifacts/${appId}/users/${userId}/categories/${currentCategoryIdForSubcategory}`);
+            const category = categories[currentCategoryIdForSubcategory];
+            const updatedSubcategories = category.subcategories.filter(sub => sub !== name);
+            
+            try {
+                await updateDoc(categoryRef, { subcategories: updatedSubcategories });
+            } catch (error) {
+                console.error("Error deleting subcategory:", error);
+            }
+        }
+
+        // Gemini API Integration for Financial Report
+        async function generateFinancialReport() {
+            showModal('financial-report');
+            reportLoading.classList.remove('hidden');
+            reportContent.classList.add('hidden');
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            const recentTransactions = transactions.slice(0, 10).map(t => ({
+                amount: parseFloat(t.amount),
+                type: t.type,
+                category: categories[t.categoryId]?.name || 'Uncategorized',
+                subcategory: t.subcategoryId,
+                title: t.title,
+                notes: t.details
+            }));
+
+            let totalIncome = 0;
+            let totalExpenses = 0;
+            transactions.forEach(t => {
+                const amountInBase = convertToBaseCurrency(parseFloat(t.amount), t.currency);
+                if (t.type === 'income') {
+                    totalIncome += amountInBase;
+                } else {
+                    totalExpenses += amountInBase;
+                }
+            });
+
+            const prompt = `Act as a helpful financial analyst. You are providing a financial health report for a user based on their recent transactions.
+            
+            Here is a summary of their recent financial data:
+            - Total Income: ${totalIncome.toFixed(2)} ${userSettings.baseCurrency}
+            - Total Expenses: ${totalExpenses.toFixed(2)} ${userSettings.baseCurrency}
+            - Recent Transactions (top 10): ${JSON.stringify(recentTransactions)}
+
+            Provide a concise, easy-to-read report that includes:
+            1. An overall summary of their financial situation.
+            2. A brief analysis of their spending habits based on the provided data.
+            3. Two to three specific and actionable suggestions to improve their financial health.
+            4. Keep the tone encouraging and positive.
+            5. Present the report as a single, coherent text without separate headings or bullet points.
+            `;
+
+            try {
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    tools: [{ "google_search": {} }],
+                    systemInstruction: {
+                        parts: [{ text: "You are a financial analyst. Provide a concise, single-paragraph summary of the key findings with actionable advice." }]
+                    },
+                };
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const generatedText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (generatedText) {
+                    reportContent.innerHTML = `<p>${generatedText}</p>`;
+                } else {
+                    reportContent.innerHTML = `<p class="text-red-500">Failed to generate report. Please try again later.</p>`;
+                }
+                
+                reportLoading.classList.add('hidden');
+                reportContent.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error generating financial report:", error);
+                reportContent.innerHTML = `<p class="text-red-500">Error: ${error.message}. The report could not be generated. Please check the console for details.</p>`;
+                reportLoading.classList.add('hidden');
+                reportContent.classList.remove('hidden');
+            }
+        }
+
+        // --- Data Management Functions ---
+
+        /**
+         * Exports all transaction data to a downloadable CSV file.
+         */
+        function exportData() {
+            try {
+                const transactionsWithDetails = transactions.map(t => {
+                    const walletName = wallets[t.walletId]?.name || 'Unknown Wallet';
+                    const categoryName = categories[t.categoryId]?.name || 'Uncategorized';
+                    return {
+                        ...t,
+                        walletName,
+                        categoryName,
+                        subcategoryName: t.subcategoryId || 'N/A'
+                    };
+                });
+
+                const headers = ['Date', 'Title', 'Type', 'Amount', 'Currency', 'Wallet', 'Category', 'Subcategory', 'Notes'];
+                const rows = transactionsWithDetails.map(t => [
+                    `"${new Date(t.createdAt.seconds * 1000).toISOString().split('T')[0]}"`,
+                    `"${t.title.replace(/"/g, '""')}"`,
+                    `"${t.type}"`,
+                    t.amount,
+                    `"${t.currency}"`,
+                    `"${t.walletName}"`,
+                    `"${t.categoryName}"`,
+                    `"${t.subcategoryName}"`,
+                    `"${t.details ? t.details.replace(/"/g, '""') : ''}"`
+                ]);
+                
+                const csvContent = [
+                    headers.join(','),
+                    ...rows.map(e => e.join(','))
+                ].join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `flow_finance_data_${new Date().toISOString().split('T')[0]}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            } catch (error) {
+                console.error("Error exporting data:", error);
+                console.log("An error occurred during export. Please try again.");
+            }
+        }
+
+
+        // Event Listeners
+        addTransactionForm.addEventListener('submit', addTransaction);
+        transferMoneyForm.addEventListener('submit', addTransfer);
+        addWalletForm.addEventListener('submit', addWallet);
+        addCategoryForm.addEventListener('submit', addCategory);
+        addSubcategoryForm.addEventListener('submit', addSubcategory);
+        baseCurrencySelect.addEventListener('change', updateBaseCurrency);
+        document.querySelectorAll('input[name="chartType"]').forEach(radio => {
+            radio.addEventListener('change', updateChartType);
+        });
+        transactionCategorySelect.addEventListener('change', updateSubcategorySelect);
+
+
+        // Make functions globally available for inline onclick
+        window.showModal = showModal;
+        window.closeModal = closeModal;
+        window.deleteTransaction = deleteTransaction;
+        window.deleteWallet = deleteWallet;
+        window.deleteCategory = deleteCategory;
+        window.showSubcategoryManager = showSubcategoryManager;
+        window.hideSubcategoryManager = hideSubcategoryManager;
+        window.deleteSubcategory = deleteSubcategory;
+        window.generateFinancialReport = generateFinancialReport;
+        window.exportData = exportData;
+
+
+        // Initialize the app
+        initializeFirebase();
+
+    </script>
+</body>
+</html>
